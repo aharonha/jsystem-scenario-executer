@@ -175,7 +175,7 @@ public class ScenarioExecutor {
 			ProjectHelper helper = ProjectHelper.getProjectHelper();
 			p.addReference("ant.projectHelper", helper);
 			helper.parse(p, scenarioFile);
-			p.setCoreLoader(p.createClassLoader(LoadersManager.getInstance().getLoader(), new Path(p)));
+//			p.setCoreLoader(p.createClassLoader(LoadersManager.getInstance().getLoader(), new Path(p)));
 			p.executeTarget(p.getDefaultTarget());
 
 		} catch (Exception e) {
