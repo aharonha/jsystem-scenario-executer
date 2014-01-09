@@ -1,0 +1,11 @@
+/target
+/.settings
+/.ant.properties
+/.classpath
+/.project
+/jsystem.properties
+/jsystem.properties.bu
+/remote0.log.1
+/remote0.log.lck
+/runnerState.properties
+/.testdir.tmp
