@@ -1,9 +1,9 @@
 package org.jsystemtest;
 
+import static jsystem.utils.StringUtils.isEmpty;
+
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,17 +14,10 @@ import jsystem.framework.scenario.RunningProperties;
 import jsystem.framework.scenario.ScenariosManager;
 import jsystem.runner.AntExecutionListener;
 import jsystem.runner.loader.LoadersManager;
-import jsystem.utils.PackageUtils;
 import jsystem.utils.StringUtils;
-import junit.framework.SystemTestCase4;
-import static jsystem.utils.StringUtils.isEmpty;
 
-import org.apache.tools.ant.AntClassLoader;
 import org.apache.tools.ant.BuildEvent;
-import org.apache.tools.ant.BuildException;
-import org.apache.tools.ant.BuildListener;
 import org.apache.tools.ant.DefaultLogger;
-import org.apache.tools.ant.Executor;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.ProjectHelper;
 import org.apache.tools.ant.SubBuildListener;
@@ -83,7 +76,7 @@ public class ScenarioExecutor {
 	Log log = new Log();
 
 	public ScenarioExecutor(File baseDir, String scenario, String sut) {
-		this.baseDir =baseDir;
+		this.baseDir = baseDir;
 		this.scenario = scenario;
 		this.sut = sut;
 		JSystemProperties.getInstance().setPreference(FrameworkOptions.TESTS_CLASS_FOLDER, baseDir.getAbsolutePath());
@@ -96,11 +89,13 @@ public class ScenarioExecutor {
 	public static void main(String... args) {
 		File baseDir = new File(args[0]);
 		System.setProperty("user.dir", baseDir.getAbsolutePath());
-		JSystemProperties.getInstance().setPreference(FrameworkOptions.LOG_FOLDER, new File(baseDir.getParentFile(), "log").getAbsolutePath());
+		JSystemProperties.getInstance().setPreference(FrameworkOptions.LOG_FOLDER,
+				new File(baseDir.getParentFile(), "log").getAbsolutePath());
 		if (isEmpty(JSystemProperties.getInstance().getPreference(FrameworkOptions.LIB_DIRS))) {
-			JSystemProperties.getInstance().setPreference(FrameworkOptions.LIB_DIRS, new File(baseDir.getParentFile(), "lib").getAbsolutePath());
+			JSystemProperties.getInstance().setPreference(FrameworkOptions.LIB_DIRS,
+					new File(baseDir.getParentFile(), "lib").getAbsolutePath());
 		}
-		
+
 		JSystemProperties.getInstance().setJsystemRunner(true);
 		LoadersManager.getInstance().getLoader();
 		JSystemProperties.getInstance().setJsystemRunner(false);
@@ -120,7 +115,7 @@ public class ScenarioExecutor {
 		// folder. This is very important if we want to run the plug-in from the
 		// parent folder.
 		System.setProperty("user.dir", baseDir.getAbsolutePath());
-		
+
 		final File scenariosPath = new File(baseDir, SCENARIO_PATH);
 		// Collect parameters that are required for the execution
 
@@ -156,7 +151,8 @@ public class ScenarioExecutor {
 		do {
 			projectNameFolder = projectNameFolder.getParentFile();
 			projectName = projectNameFolder.getName();
-		} while (projectNameFolder.getName().equalsIgnoreCase("target") || (projectNameFolder.getName().equalsIgnoreCase("classes")));
+		} while (projectNameFolder.getName().equalsIgnoreCase("target")
+				|| (projectNameFolder.getName().equalsIgnoreCase("classes")));
 		getLog().info("of project " + projectName);
 		getLog().info("------------------------------------------------------------------------");
 
@@ -170,7 +166,8 @@ public class ScenarioExecutor {
 		}
 		getLog().info("------------------------------------------------------------------------");
 		getLog().info("Execution of scenarios " + scenario + " ended ");
-		getLog().info("Reports can be found in " + JSystemProperties.getInstance().getPreference(FrameworkOptions.LOG_FOLDER));
+		getLog().info(
+				"Reports can be found in " + JSystemProperties.getInstance().getPreference(FrameworkOptions.LOG_FOLDER));
 
 	}
 
@@ -191,57 +188,64 @@ public class ScenarioExecutor {
 		getLog().info("Executing scenario " + scenarioFile.getName() + " with sut " + p.getProperty("sutFile"));
 		try {
 			final Path classPath = new Path(p);
-			for (String libDir:JSystemProperties.getInstance().getPreference(FrameworkOptions.LIB_DIRS).split(";")){
+			for (String libDir : JSystemProperties.getInstance().getPreference(FrameworkOptions.LIB_DIRS).split(";")) {
 				classPath.createPath().setPath(libDir);
 			}
 			classPath.createPath().setPath(p.getBaseDir().getAbsolutePath());
 			p.addBuildListener(new SubBuildListener() {
-				
+
 				@Override
 				public void taskStarted(BuildEvent event) {
 					targetStarted(event);
 				}
-				
+
 				@Override
-				public void taskFinished(BuildEvent event) {}
-				
+				public void taskFinished(BuildEvent event) {
+				}
+
 				@Override
 				public void targetStarted(BuildEvent event) {
-					if (event.getTask() instanceof UnknownElement){
+					if (event.getTask() instanceof UnknownElement) {
 						UnknownElement unknownElement = (UnknownElement) event.getTask();
 						unknownElement.maybeConfigure();
-						if (unknownElement.getRealThing() instanceof JSystemTask ){
+						if (unknownElement.getRealThing() instanceof JSystemTask) {
 							JSystemTask task = (JSystemTask) unknownElement.getRealThing();
 							task.createClasspath().add(classPath);
 						}
 					}
 				}
-				
+
 				@Override
-				public void targetFinished(BuildEvent event) {}
-				
+				public void targetFinished(BuildEvent event) {
+				}
+
 				@Override
-				public void messageLogged(BuildEvent event) {}
-				
+				public void messageLogged(BuildEvent event) {
+				}
+
 				@Override
-				public void buildStarted(BuildEvent event) {}
-				
+				public void buildStarted(BuildEvent event) {
+				}
+
 				@Override
-				public void buildFinished(BuildEvent event) {}
-				
+				public void buildFinished(BuildEvent event) {
+				}
+
 				@Override
-				public void subBuildStarted(BuildEvent event) {}
-				
+				public void subBuildStarted(BuildEvent event) {
+				}
+
 				@Override
-				public void subBuildFinished(BuildEvent event) {}
+				public void subBuildFinished(BuildEvent event) {
+				}
 			});
 			p.fireBuildStarted();
 			p.init();
 			ProjectHelper helper = ProjectHelper.getProjectHelper();
-			p.addReference("ant.projectHelper", helper);			
+			p.addReference("ant.projectHelper", helper);
 			helper.parse(p, scenarioFile);
 			p.executeTarget(p.getDefaultTarget());
-			
+
 		} catch (Exception e) {
 			getLog().error("Failed to execute scenario " + scenarioFile.getName());
 			e.printStackTrace();
@@ -283,7 +287,7 @@ public class ScenarioExecutor {
 	 */
 	private void updateJSystemProperties(final File sutFile, final String sutName, final File scenarioFile,
 			final String scenarioName) {
-		
+
 		String reporters = JSystemProperties.getInstance().getPreference(FrameworkOptions.REPORTERS_CLASSES);
 
 		// Making sure that the JUnit reporter is in the reporter.classes
@@ -304,13 +308,10 @@ public class ScenarioExecutor {
 		// SUT
 		JSystemProperties.getInstance().setPreference(FrameworkOptions.USED_SUT_FILE, sutName);
 
-				
-
 		// Test Source
 		JSystemProperties.getInstance().setPreference(FrameworkOptions.TESTS_SOURCE_FOLDER,
 				baseDir.getAbsolutePath() + File.separator + "tests");
 
-	
 	}
 
 	/**
@@ -320,9 +321,10 @@ public class ScenarioExecutor {
 	 * @param scenarioFile
 	 * @param sutFile
 	 * @return
-	 * @throws Exception 
+	 * @throws Exception
 	 */
-	private Project createNewAntProject(File scenariosPath, File scenarioFile, String scenarioName, String sutName) throws Exception {
+	private Project createNewAntProject(File scenariosPath, File scenarioFile, String scenarioName, String sutName)
+			throws Exception {
 		System.setProperty(RunningProperties.CURRENT_SCENARIO_NAME, scenarioName);
 		System.setProperty(RunningProperties.CURRENT_SUT, sutName);
 		Project p = new Project();
@@ -337,12 +339,12 @@ public class ScenarioExecutor {
 		consoleLogger.setErrorPrintStream(System.err);
 		consoleLogger.setOutputPrintStream(System.out);
 		consoleLogger.setMessageOutputLevel(Project.MSG_INFO);
-		
+
 		p.addBuildListener(consoleLogger);
-		if (!ScenariosManager.getInstance().isScenarioExists(scenarioName)){
+		if (!ScenariosManager.getInstance().isScenarioExists(scenarioName)) {
 			throw new Exception("Scenario does not exist!");
 		}
-		
+
 		return p;
 	}
 
