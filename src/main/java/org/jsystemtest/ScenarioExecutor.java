@@ -16,17 +16,28 @@ import jsystem.runner.AntExecutionListener;
 import jsystem.runner.loader.LoadersManager;
 import jsystem.utils.PackageUtils;
 import jsystem.utils.StringUtils;
+import junit.framework.SystemTestCase4;
+import static jsystem.utils.StringUtils.isEmpty;
 
+import org.apache.tools.ant.AntClassLoader;
+import org.apache.tools.ant.BuildEvent;
+import org.apache.tools.ant.BuildException;
+import org.apache.tools.ant.BuildListener;
 import org.apache.tools.ant.DefaultLogger;
+import org.apache.tools.ant.Executor;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.ProjectHelper;
+import org.apache.tools.ant.SubBuildListener;
+import org.apache.tools.ant.UnknownElement;
 import org.apache.tools.ant.types.Path;
 import org.jsystemtest.MultipleScenarioSuitExecutionFileParser.Execution;
 
+import com.aqua.anttask.jsystem.JSystemTask;
+
 public class ScenarioExecutor {
 
-	private static final String SCENARIO_PATH = "classes/scenarios";
-	private static final String SUT_PATH = "classes/sut";
+	private static final String SCENARIO_PATH = "scenarios";
+	private static final String SUT_PATH = "sut";
 	private static final String TEST_PROPERTIES_FILE_EMPTY = ".testPropertiesFile_Empty";
 	private static final String DEFAULT_REPORTERS = "jsystem.extensions.report.html.LevelHtmlTestReporter;jsystem.framework.report.SystemOutTestReporter;jsystem.extensions.report.xml.XmlReporter";
 	private static final String DELIMITER = ",";
@@ -72,10 +83,10 @@ public class ScenarioExecutor {
 	Log log = new Log();
 
 	public ScenarioExecutor(File baseDir, String scenario, String sut) {
-		this.baseDir = new File(baseDir , "target");
+		this.baseDir =baseDir;
 		this.scenario = scenario;
 		this.sut = sut;
-		JSystemProperties.getInstance().setPreference(FrameworkOptions.TESTS_CLASS_FOLDER, new File(this.baseDir,"classes").getAbsolutePath());
+		JSystemProperties.getInstance().setPreference(FrameworkOptions.TESTS_CLASS_FOLDER, baseDir.getAbsolutePath());
 	}
 
 	public Log getLog() {
@@ -85,7 +96,11 @@ public class ScenarioExecutor {
 	public static void main(String... args) {
 		File baseDir = new File(args[0]);
 		System.setProperty("user.dir", baseDir.getAbsolutePath());
-		JSystemProperties.getInstance().setPreference(FrameworkOptions.LOG_FOLDER, new File(baseDir,"log").getAbsolutePath());		
+		JSystemProperties.getInstance().setPreference(FrameworkOptions.LOG_FOLDER, new File(baseDir.getParentFile(), "log").getAbsolutePath());
+		if (isEmpty(JSystemProperties.getInstance().getPreference(FrameworkOptions.LIB_DIRS))) {
+			JSystemProperties.getInstance().setPreference(FrameworkOptions.LIB_DIRS, new File(baseDir.getParentFile(), "lib").getAbsolutePath());
+		}
+		
 		JSystemProperties.getInstance().setJsystemRunner(true);
 		LoadersManager.getInstance().getLoader();
 		JSystemProperties.getInstance().setJsystemRunner(false);
@@ -136,7 +151,13 @@ public class ScenarioExecutor {
 
 		getLog().info("--------------------- Jsystem Scenario Executor ------------------------");
 		getLog().info("About to execute scenarios " + scenario + " with sut files " + sut);
-		getLog().info("of project=" + baseDir);
+		String projectName = "";
+		File projectNameFolder = baseDir;
+		do {
+			projectNameFolder = projectNameFolder.getParentFile();
+			projectName = projectNameFolder.getName();
+		} while (projectNameFolder.getName().equalsIgnoreCase("target") || (projectNameFolder.getName().equalsIgnoreCase("classes")));
+		getLog().info("of project " + projectName);
 		getLog().info("------------------------------------------------------------------------");
 
 		for (int i = 0; i < scenarioFilesArr.length; i++) {
@@ -169,17 +190,66 @@ public class ScenarioExecutor {
 	private void executeSingleScenario(final File scenarioFile, final Project p) {
 		getLog().info("Executing scenario " + scenarioFile.getName() + " with sut " + p.getProperty("sutFile"));
 		try {
-			
+			final Path classPath = new Path(p);
+			for (String libDir:JSystemProperties.getInstance().getPreference(FrameworkOptions.LIB_DIRS).split(";")){
+				classPath.createPath().setPath(libDir);
+			}
+			classPath.createPath().setPath(p.getBaseDir().getAbsolutePath());
+			final AntClassLoader jsystemLoader = p.createClassLoader(LoadersManager.getInstance().getLoader(), classPath);
+			jsystemLoader.setParentFirst(true);
+
+
 			p.fireBuildStarted();
 			p.init();
 			ProjectHelper helper = ProjectHelper.getProjectHelper();
-			p.addReference("ant.projectHelper", helper);
+			p.addReference("ant.projectHelper", helper);			
 			helper.parse(p, scenarioFile);
-//			p.setCoreLoader(p.createClassLoader(LoadersManager.getInstance().getLoader(), new Path(p)));
+			
+			p.addBuildListener(new SubBuildListener() {
+				
+				@Override
+				public void taskStarted(BuildEvent event) {
+					targetStarted(event);
+				}
+				
+				@Override
+				public void taskFinished(BuildEvent event) {}
+				
+				@Override
+				public void targetStarted(BuildEvent event) {
+					if (event.getTask() instanceof UnknownElement){
+						UnknownElement unknownElement = (UnknownElement) event.getTask();
+						unknownElement.maybeConfigure();
+						if (unknownElement.getRealThing() instanceof JSystemTask ){
+							JSystemTask task = (JSystemTask) unknownElement.getRealThing();
+							task.createClasspath().add(classPath);
+						}
+					}
+				}
+				
+				@Override
+				public void targetFinished(BuildEvent event) {}
+				
+				@Override
+				public void messageLogged(BuildEvent event) {}
+				
+				@Override
+				public void buildStarted(BuildEvent event) {}
+				
+				@Override
+				public void buildFinished(BuildEvent event) {}
+				
+				@Override
+				public void subBuildStarted(BuildEvent event) {}
+				
+				@Override
+				public void subBuildFinished(BuildEvent event) {}
+			});
 			p.executeTarget(p.getDefaultTarget());
-
+			
 		} catch (Exception e) {
 			getLog().error("Failed to execute scenario " + scenarioFile.getName());
+			e.printStackTrace();
 			getLog().error(e);
 		} finally {
 			p.fireBuildFinished(null);
@@ -239,9 +309,7 @@ public class ScenarioExecutor {
 		// SUT
 		JSystemProperties.getInstance().setPreference(FrameworkOptions.USED_SUT_FILE, sutName);
 
-		// Class Folder
-		JSystemProperties.getInstance().setPreference(FrameworkOptions.TESTS_CLASS_FOLDER,
-				baseDir.getAbsolutePath() + File.separator + "classes");
+				
 
 		// Test Source
 		JSystemProperties.getInstance().setPreference(FrameworkOptions.TESTS_SOURCE_FOLDER,
