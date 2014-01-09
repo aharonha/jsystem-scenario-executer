@@ -195,16 +195,6 @@ public class ScenarioExecutor {
 				classPath.createPath().setPath(libDir);
 			}
 			classPath.createPath().setPath(p.getBaseDir().getAbsolutePath());
-			final AntClassLoader jsystemLoader = p.createClassLoader(LoadersManager.getInstance().getLoader(), classPath);
-			jsystemLoader.setParentFirst(true);
-
-
-			p.fireBuildStarted();
-			p.init();
-			ProjectHelper helper = ProjectHelper.getProjectHelper();
-			p.addReference("ant.projectHelper", helper);			
-			helper.parse(p, scenarioFile);
-			
 			p.addBuildListener(new SubBuildListener() {
 				
 				@Override
@@ -245,6 +235,11 @@ public class ScenarioExecutor {
 				@Override
 				public void subBuildFinished(BuildEvent event) {}
 			});
+			p.fireBuildStarted();
+			p.init();
+			ProjectHelper helper = ProjectHelper.getProjectHelper();
+			p.addReference("ant.projectHelper", helper);			
+			helper.parse(p, scenarioFile);
 			p.executeTarget(p.getDefaultTarget());
 			
 		} catch (Exception e) {
