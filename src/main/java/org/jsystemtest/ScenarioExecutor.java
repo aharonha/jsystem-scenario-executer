@@ -1,7 +1,5 @@
 package org.jsystemtest;
 
-import static jsystem.utils.StringUtils.isEmpty;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,7 +11,6 @@ import jsystem.framework.JSystemProperties;
 import jsystem.framework.scenario.RunningProperties;
 import jsystem.framework.scenario.ScenariosManager;
 import jsystem.runner.AntExecutionListener;
-import jsystem.runner.loader.LoadersManager;
 import jsystem.utils.StringUtils;
 
 import org.apache.tools.ant.BuildEvent;
@@ -84,28 +81,6 @@ public class ScenarioExecutor {
 
 	public Log getLog() {
 		return log;
-	}
-
-	public static void main(String... args) {
-		File baseDir = new File(args[0]);
-		System.setProperty("user.dir", baseDir.getAbsolutePath());
-		JSystemProperties.getInstance().setPreference(FrameworkOptions.LOG_FOLDER,
-				new File(baseDir.getParentFile(), "log").getAbsolutePath());
-		if (isEmpty(JSystemProperties.getInstance().getPreference(FrameworkOptions.LIB_DIRS))) {
-			JSystemProperties.getInstance().setPreference(FrameworkOptions.LIB_DIRS,
-					new File(baseDir.getParentFile(), "lib").getAbsolutePath());
-		}
-
-		JSystemProperties.getInstance().setJsystemRunner(true);
-		LoadersManager.getInstance().getLoader();
-		JSystemProperties.getInstance().setJsystemRunner(false);
-		ScenarioExecutor executor = new ScenarioExecutor(baseDir, args[1], args[2]);
-		try {
-			executor.execute();
-		} catch (Throwable t) {
-			System.err.println("Failed due to " + t.getMessage());
-			t.printStackTrace();
-		}
 	}
 
 	public void execute() throws Exception {
@@ -189,7 +164,7 @@ public class ScenarioExecutor {
 		try {
 			final Path classPath = new Path(p);
 			for (String libDir : JSystemProperties.getInstance().getPreference(FrameworkOptions.LIB_DIRS).split(";")) {
-				classPath.createPath().setPath(libDir);
+				classPath.addExtdirs(new Path(p, libDir));
 			}
 			classPath.createPath().setPath(p.getBaseDir().getAbsolutePath());
 			p.addBuildListener(new SubBuildListener() {
@@ -347,6 +322,7 @@ public class ScenarioExecutor {
 
 		return p;
 	}
+
 
 	/**
 	 * This is required for executing scenarios
