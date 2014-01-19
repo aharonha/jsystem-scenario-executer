@@ -71,6 +71,12 @@ public class ScenarioExecutor {
 	}
 
 	Log log = new Log();
+	
+	public ScenarioExecutor(File baseDir, String xmlFile){
+		this.baseDir = baseDir;
+		this.xmlFile = xmlFile;
+		JSystemProperties.getInstance().setPreference(FrameworkOptions.TESTS_CLASS_FOLDER, baseDir.getAbsolutePath());
+	}
 
 	public ScenarioExecutor(File baseDir, String scenario, String sut) {
 		this.baseDir = baseDir;

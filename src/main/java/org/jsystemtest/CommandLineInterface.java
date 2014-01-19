@@ -19,18 +19,23 @@ import org.apache.commons.cli.PosixParser;
 
 public class CommandLineInterface {
 	@SuppressWarnings("static-access")
-	private static Option projectOpt = OptionBuilder.hasArg().withLongOpt("project").withArgName("project").withDescription("Test project").create("p");
+	private static Option projectOpt = OptionBuilder.hasArg().withLongOpt("project").withArgName("project")
+			.withDescription("Test project").create("p");
 
 	@SuppressWarnings("static-access")
-	private static Option sutOpt = OptionBuilder.hasArg().withArgName("sut").withLongOpt("sut").withDescription("Sut file to be used")
-			.create("u");
+	private static Option sutOpt = OptionBuilder.hasArg().withArgName("sut").withLongOpt("sut")
+			.withDescription("Sut file to be used").create("u");
 
 	@SuppressWarnings("static-access")
-	private static Option scenarioOpt = OptionBuilder.hasArg().withLongOpt("scenario").withArgName("scenario").withDescription("Scenario file to execute")
-			.create("s");
+	private static Option scenarioOpt = OptionBuilder.hasArg().withLongOpt("scenario").withArgName("scenario")
+			.withDescription("Scenario file to execute").create("s");
 
 	@SuppressWarnings("static-access")
 	private static Option helpOpt = OptionBuilder.withLongOpt("help").withDescription("Help").create("h");
+
+	@SuppressWarnings("static-access")
+	private static Option fileOpt = OptionBuilder.hasArg().withLongOpt("file").withArgName("file").withLongOpt("file")
+			.withDescription("Multiple scenario suit execution XML file").create("f");
 
 	private static void printHelp(Options options) {
 		HelpFormatter forametter = new HelpFormatter();
@@ -43,6 +48,7 @@ public class CommandLineInterface {
 		options.addOption(sutOpt);
 		options.addOption(scenarioOpt);
 		options.addOption(helpOpt);
+		options.addOption(fileOpt);
 
 		CommandLineParser parser = new PosixParser();
 		CommandLine cmd = parser.parse(options, args);
@@ -51,15 +57,29 @@ public class CommandLineInterface {
 			printHelp(options);
 			return;
 		}
-		if (!cmd.hasOption(scenarioOpt.getOpt()) || !cmd.hasOption(sutOpt.getOpt())
-				|| !cmd.hasOption(projectOpt.getOpt())) {
+		if (!cmd.hasOption(projectOpt.getOpt())) {
 			printHelp(options);
 			return;
 		}
-
 		File baseDir = new File(cmd.getOptionValue(projectOpt.getOpt()));
-		String scenario = cmd.getOptionValue(scenarioOpt.getOpt());
-		String sut = cmd.getOptionValue(sutOpt.getOpt());
+		
+		String xmlFile = null;
+		String scenario = null;
+		String sut = null;
+		ScenarioExecutor executor = null;
+		if (cmd.hasOption(fileOpt.getOpt())){
+			xmlFile = cmd.getOptionValue(fileOpt.getOpt());
+			executor = new ScenarioExecutor(baseDir, xmlFile);
+		} else {
+			if (!cmd.hasOption(scenarioOpt.getOpt()) || !cmd.hasOption(sutOpt.getOpt()) ) {
+				printHelp(options);
+				return;
+			}
+			scenario = cmd.getOptionValue(scenarioOpt.getOpt());
+			sut = cmd.getOptionValue(sutOpt.getOpt());
+			executor = new ScenarioExecutor(baseDir, scenario, sut);
+		}
+
 
 		System.setProperty("user.dir", baseDir.getAbsolutePath());
 		JSystemProperties.getInstance().setPreference(FrameworkOptions.LOG_FOLDER,
@@ -72,7 +92,7 @@ public class CommandLineInterface {
 		JSystemProperties.getInstance().setJsystemRunner(true);
 		LoadersManager.getInstance().getLoader();
 		JSystemProperties.getInstance().setJsystemRunner(false);
-		ScenarioExecutor executor = new ScenarioExecutor(baseDir, scenario, sut);
+		
 		try {
 			executor.execute();
 		} catch (Throwable t) {
